@@ -1,6 +1,10 @@
 #ifndef _NVSJSON_H_
 #define _NVSJSON_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -38,21 +42,21 @@ typedef union
 {
     struct
     {
+       int32_t s32Default;
        int32_t s32Min;
        int32_t s32Max;
-       int32_t s32Default;
        PtrValidateInt32 ptrValidator;
     } sInt32;
     struct
     {
+       double dDefault;
        double dMin;
        double dMax;
-       double dDefault;
        PtrValidateDouble ptrValidator;
     } sDouble;
     struct
     {
-       char* szDefault;
+       const char* szDefault;
        PtrValidateString ptrValidator;
     } sString;
 } NVSJSON_UConfig;
@@ -75,14 +79,14 @@ typedef struct
 } NVSJSON_SHandle;
 
 #define NVSJSON_GETVALUESTRING_MAXLEN (100)
-		
-#define NVSJSON_INITSTRING_RNG(_szKey, _szDesc, _szDefault, _eFlags) { .szKey = _szKey, .eType = NVSJSON_ETYPE_String,.szDesc = _szDesc, .uConfig = { .sString = { .szDefault = _szDefault, .ptrValidator = NULL } }, .eFlags = _eFlags }
-#define NVSJSON_INITSTRING_VALIDATOR(_szKey, _szDesc, _szDefault, _ptrValidateString, _eFlags) { .szKey = _szKey, .eType = NVSJSON_ETYPE_String,.szDesc = _szDesc, .uConfig = { .sString = { .szDefault = _szDefault, .ptrValidator = _ptrValidateString } }, .eFlags = _eFlags }
+
+#define NVSJSON_INITSTRING(_szKey, _szDesc, _szDefault, _eFlags) { .szKey = _szKey, .szDesc = _szDesc, .eType = NVSJSON_ETYPE_String, .uConfig = { .sString = { .szDefault = _szDefault, .ptrValidator = NULL } }, .eFlags = _eFlags }
+#define NVSJSON_INITSTRING_VALIDATOR(_szKey, _szDesc, _szDefault, _ptrValidateString, _eFlags) { .szKey = _szKey, .szDesc = _szDesc, .eType = NVSJSON_ETYPE_String, .uConfig = { .sString = { .szDefault = _szDefault, .ptrValidator = _ptrValidateString } }, .eFlags = _eFlags }
 
 #define NVSJSON_INITDOUBLE_RNG(_szKey, _szDesc, _dDefault, _dMin, _dMax, _eFlags) { .szKey = _szKey, .eType = NVSJSON_ETYPE_Double,.szDesc = _szDesc, .uConfig = { .sDouble = { .dDefault = _dDefault, .dMin = _dMin, .dMax = _dMax, .ptrValidator = NULL } }, .eFlags = _eFlags }
 #define NVSJSON_INITDOUBLE_VALIDATOR(_szKey, _szDesc, _dDefault, _ptrValidateDouble, _eFlags) { .szKey = _szKey, .eType = NVSJSON_ETYPE_Double,.szDesc = _szDesc, .uConfig = { .sDouble = { .dDefault = _dDefault, .ptrValidator = _ptrValidateDouble } }, .eFlags = _eFlags }
 
-#define NVSJSON_INITINT32_RNG(_szKey, _szDesc, _s32Default, _s32Min, _s32Max, _eFlags) { .szKey = _szKey, .eType = NVSJSON_ETYPE_Int32,.szDesc = _szDesc, .uConfig = { .sInt32 = { .s32Default = _s32Default, .s32Min = _s32Min, .s32Max = _s32Max, .ptrValidator = NULL } }, .eFlags = _eFlags }
+#define NVSJSON_INITINT32_RNG(_szKey, _szDesc, _s32Default, _s32Min, _s32Max, _eFlags) { .szKey = _szKey, .szDesc = _szDesc, .eType = NVSJSON_ETYPE_Int32, .uConfig = { .sInt32 = { .s32Default = _s32Default, .s32Min = _s32Min, .s32Max = _s32Max, .ptrValidator = NULL } }, .eFlags = _eFlags }
 #define NVSJSON_INITINT32_VALIDATOR(_szKey, _szDesc, _s32Default, _ptrValidateInt32, _eFlags) { .szKey = _szKey, .eType = NVSJSON_ETYPE_Int32,.szDesc = _szDesc, .uConfig = { .sInt32 = { .s32Default = _s32Default, .ptrValidator = _ptrValidateInt32 } }, .eFlags = _eFlags }
 
 void NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SSettingEntry* pSettingEntries, uint32_t u32SettingEntryCount);
@@ -101,5 +105,8 @@ NVSJSON_ESETRET NVSJSON_SetValueString(NVSJSON_SHandle* pHandle, uint16_t u16Ent
 char* NVSJSON_ExportJSON(NVSJSON_SHandle* pHandle);
 bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
