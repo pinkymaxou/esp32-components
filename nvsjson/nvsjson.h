@@ -16,6 +16,8 @@ typedef enum
     NVSJSON_ESETRET_CannotSet = 1,
     NVSJSON_ESETRET_InvalidRange = 2,
     NVSJSON_ESETRET_ValidatorFailed = 3,
+
+    NVSJSON_ESETRET_InvalidLibrarySettings = 4,
 } NVSJSON_ESETRET;
 
 typedef enum
@@ -72,10 +74,22 @@ typedef struct _NVSJSON_SSettingEntry
 
 typedef struct
 {
+    const char* szPartitionName;
+
+    const NVSJSON_SSettingEntry* pSettingEntries;
+    uint32_t u32SettingEntryCount;
+} NVSJSON_SConfig;
+
+
+typedef struct
+{
 	nvs_handle_t sNVS;
+    bool bIsInitialized;
 	// Entries
 	const NVSJSON_SSettingEntry* pSettingEntries;
 	uint32_t u32SettingEntryCount;
+
+    const NVSJSON_SConfig* psConfig;
 } NVSJSON_SHandle;
 
 #define NVSJSON_GETVALUESTRING_MAXLEN (100)
@@ -89,9 +103,9 @@ typedef struct
 #define NVSJSON_INITINT32_RNG(_szKey, _szDesc, _s32Default, _s32Min, _s32Max, _eFlags) { .szKey = _szKey, .szDesc = _szDesc, .eType = NVSJSON_ETYPE_Int32, .uConfig = { .sInt32 = { .s32Default = _s32Default, .s32Min = _s32Min, .s32Max = _s32Max, .ptrValidator = NULL } }, .eFlags = _eFlags }
 #define NVSJSON_INITINT32_VALIDATOR(_szKey, _szDesc, _s32Default, _ptrValidateInt32, _eFlags) { .szKey = _szKey, .eType = NVSJSON_ETYPE_Int32,.szDesc = _szDesc, .uConfig = { .sInt32 = { .s32Default = _s32Default, .ptrValidator = _ptrValidateInt32 } }, .eFlags = _eFlags }
 
-void NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SSettingEntry* pSettingEntries, uint32_t u32SettingEntryCount);
-void NVSJSON_Load(NVSJSON_SHandle* pHandle);
-void NVSJSON_Save(NVSJSON_SHandle* pHandle);
+NVSJSON_ESETRET NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SConfig* psConfig);
+NVSJSON_ESETRET NVSJSON_Load(NVSJSON_SHandle* pHandle);
+NVSJSON_ESETRET NVSJSON_Save(NVSJSON_SHandle* pHandle);
 
 int32_t NVSJSON_GetValueInt32(NVSJSON_SHandle* pHandle, uint16_t u16Entry);
 NVSJSON_ESETRET NVSJSON_SetValueInt32(NVSJSON_SHandle* pHandle, uint16_t u16Entry, bool bIsDryRun, int32_t s32NewValue);

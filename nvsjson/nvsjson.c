@@ -7,8 +7,7 @@
 #include "esp_log.h"
 #include <string.h>
 
-#define TAG "SETTINGS"
-#define PARTITION_NAME "nvs"
+#define TAG "nvsjson"
 
 // JSON entries
 #define JSON_ENTRIES_NAME "entries"
@@ -28,22 +27,38 @@
 static const NVSJSON_SSettingEntry* GetSettingEntry(NVSJSON_SHandle* pHandle, uint16_t eEntry);
 static bool GetSettingEntryByKey(NVSJSON_SHandle* pHandle, const char* szKey, uint16_t* pU16Entry);
 
-void NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SSettingEntry* pSettingEntries, uint32_t u32SettingEntryCount)
+NVSJSON_ESETRET NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SConfig* psConfig)
 {
-	pHandle->pSettingEntries = pSettingEntries;
-	pHandle->u32SettingEntryCount = u32SettingEntryCount;
-	
-    ESP_ERROR_CHECK(nvs_open(PARTITION_NAME, NVS_READWRITE, &pHandle->sNVS));
+    pHandle->bIsInitialized = false;
+
+    if (pHandle->pSettingEntries == NULL ||
+        pHandle->u32SettingEntryCount == 0 ||
+        psConfig->szPartitionName == NULL ||
+        psConfig == NULL)
+    {
+        return NVSJSON_ESETRET_InvalidLibrarySettings;
+    }
+
+    pHandle->psConfig = psConfig;
+    return NVSJSON_ESETRET_OK;
 }
 
-void NVSJSON_Load(NVSJSON_SHandle* pHandle)
+NVSJSON_ESETRET NVSJSON_Load(NVSJSON_SHandle* pHandle)
 {
-	
+    if (pHandle->bIsInitialized)
+    {
+        nvs_close(pHandle->sNVS);
+        pHandle->bIsInitialized = false;
+    }
+    ESP_ERROR_CHECK(nvs_open(pHandle->psConfig->szPartitionName, NVS_READWRITE, &pHandle->sNVS));
+    pHandle->bIsInitialized = true;
+    return NVSJSON_ESETRET_OK;
 }
 
-void NVSJSON_Save(NVSJSON_SHandle* pHandle)
+NVSJSON_ESETRET NVSJSON_Save(NVSJSON_SHandle* pHandle)
 {
     ESP_ERROR_CHECK(nvs_commit(pHandle->sNVS));
+    return NVSJSON_ESETRET_OK;
 }
 
 int32_t NVSJSON_GetValueInt32(NVSJSON_SHandle* pHandle, uint16_t u16Entry)
@@ -60,7 +75,7 @@ NVSJSON_ESETRET NVSJSON_SetValueInt32(NVSJSON_SHandle* pHandle, uint16_t u16Entr
 {
     const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, u16Entry);
     assert(pEnt != NULL && pEnt->eType == NVSJSON_ETYPE_Int32);
-        
+
     if (pEnt->uConfig.sInt32.ptrValidator != NULL)
     {
         if (!pEnt->uConfig.sInt32.ptrValidator(pEnt, s32NewValue))
@@ -174,7 +189,7 @@ char* NVSJSON_ExportJSON(NVSJSON_SHandle* pHandle)
         cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_KEY_NAME, cJSON_CreateString(pEntry->szKey));
 
         cJSON* pEntryInfoJSON = cJSON_CreateObject();
-        
+
         // Description and flags apply everywhere
         cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DESC_NAME, cJSON_CreateString(pEntry->szDesc));
         cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_FLAG_REBOOT_NAME, cJSON_CreateNumber((pEntry->eFlags & NVSJSON_EFLAGS_NeedsReboot)? 1 : 0));
@@ -313,7 +328,7 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
                     ESP_LOGE(TAG, "JSON value type is invalid, not a string");
                     goto ERROR;
                 }
-                
+
                 const char* str = pValueJSON->valuestring;
                 NVSJSON_ESETRET eSetRet;
                 if ((eSetRet = NVSJSON_SetValueString(pHandle, u16Entry, bIsDryRun, str)) != NVSJSON_ESETRET_OK)
