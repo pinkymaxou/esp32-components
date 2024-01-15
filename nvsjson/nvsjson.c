@@ -31,10 +31,10 @@ NVSJSON_ESETRET NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SConfig* ps
 {
     pHandle->bIsInitialized = false;
 
-    if (pHandle->pSettingEntries == NULL ||
-        pHandle->u32SettingEntryCount == 0 ||
-        psConfig->szPartitionName == NULL ||
-        psConfig == NULL)
+    if (psConfig == NULL ||
+        psConfig->pSettingEntries == NULL ||
+        psConfig->u32SettingEntryCount == 0 ||
+        psConfig->szPartitionName == NULL)
     {
         return NVSJSON_ESETRET_InvalidLibrarySettings;
     }
@@ -180,7 +180,7 @@ char* NVSJSON_ExportJSON(NVSJSON_SHandle* pHandle)
 
     cJSON* pEntries = cJSON_AddArrayToObject(pRoot, JSON_ENTRIES_NAME);
 
-    for(int i = 0; i < pHandle->u32SettingEntryCount; i++)
+    for(int i = 0; i < pHandle->psConfig->u32SettingEntryCount; i++)
     {
         uint16_t u16Entry = (uint16_t)i;
         const NVSJSON_SSettingEntry* pEntry = GetSettingEntry( pHandle, u16Entry );
@@ -352,16 +352,16 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
 
 static const NVSJSON_SSettingEntry* GetSettingEntry(NVSJSON_SHandle* pHandle, uint16_t u16Entry)
 {
-    if ( (int)u16Entry >= pHandle->u32SettingEntryCount)
+    if ( (int)u16Entry >= pHandle->psConfig->u32SettingEntryCount)
         return NULL;
-    return &pHandle->pSettingEntries[(int)u16Entry];
+    return &pHandle->psConfig->pSettingEntries[(int)u16Entry];
 }
 
 static bool GetSettingEntryByKey(NVSJSON_SHandle* pHandle, const char* szKey, uint16_t* pu16Entry)
 {
-    for(int i = 0; i < pHandle->u32SettingEntryCount; i++)
+    for(int i = 0; i < pHandle->psConfig->u32SettingEntryCount; i++)
     {
-        if (strcmp(pHandle->pSettingEntries[i].szKey, szKey) == 0)
+        if (strcmp(pHandle->psConfig->pSettingEntries[i].szKey, szKey) == 0)
         {
             *pu16Entry = (uint16_t)i;
             return true;

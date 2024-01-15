@@ -86,9 +86,6 @@ typedef struct
 	nvs_handle_t sNVS;
     bool bIsInitialized;
 	// Entries
-	const NVSJSON_SSettingEntry* pSettingEntries;
-	uint32_t u32SettingEntryCount;
-
     const NVSJSON_SConfig* psConfig;
 } NVSJSON_SHandle;
 
