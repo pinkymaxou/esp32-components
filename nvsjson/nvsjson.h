@@ -44,16 +44,16 @@ typedef union
 {
     struct
     {
-       int32_t s32Default;
        int32_t s32Min;
        int32_t s32Max;
+       int32_t s32Default;
        PtrValidateInt32 ptrValidator;
     } sInt32;
     struct
     {
-       double dDefault;
        double dMin;
        double dMax;
+       double dDefault;
        PtrValidateDouble ptrValidator;
     } sDouble;
     struct
