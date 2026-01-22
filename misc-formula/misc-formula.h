@@ -11,7 +11,7 @@ double MISCFA_CircleDiff(double a, double b, double rotation);
 
 int32_t MISCFA_CircleDiffd32(int32_t a, int32_t b, int32_t rotation);
 
-double MISCFA_LinearizeLEDOutput(double dOfOne);
+double MISCFA_LinearizeLEDOutput(double of_one);
 
 #ifdef __cplusplus
 }

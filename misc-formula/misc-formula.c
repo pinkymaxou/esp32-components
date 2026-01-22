@@ -12,7 +12,7 @@ int32_t MISCFA_CircleDiffd32(int32_t a, int32_t b, int32_t rotation)
     return fmod((a - b + rotation + halfRotation), rotation) - halfRotation;
 }
 
-double MISCFA_LinearizeLEDOutput(double dOfOne)
+double MISCFA_LinearizeLEDOutput(double of_one)
 {
-    return (pow(10.0d, dOfOne) - 1.0d) / 9.0d;
+    return (pow(10.0d, of_one) - 1.0d) / 9.0d;
 }
