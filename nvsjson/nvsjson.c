@@ -24,149 +24,147 @@
 #define JSON_ENTRY_INFO_TYPE_NAME "type"
 #define JSON_ENTRY_INFO_FLAG_REBOOT_NAME "flag_reboot"
 
-static const NVSJSON_SSettingEntry* GetSettingEntry(NVSJSON_SHandle* pHandle, uint16_t eEntry);
-static bool GetSettingEntryByKey(NVSJSON_SHandle* pHandle, const char* szKey, uint16_t* pU16Entry);
+static const NVSJSON_SSettingEntry* GetSettingEntry(NVSJSON_SHandle* pHandle, uint16_t entry);
+static bool GetSettingEntryByKey(NVSJSON_SHandle* pHandle, const char* key, uint16_t* p_entry);
 
-NVSJSON_ESETRET NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SConfig* psConfig)
+NVSJSON_ESETRET NVSJSON_Init(NVSJSON_SHandle* pHandle, const NVSJSON_SConfig* config)
 {
-    pHandle->bIsInitialized = false;
+    pHandle->isInitialized = false;
 
-    if (psConfig == NULL ||
-        psConfig->pSettingEntries == NULL ||
-        psConfig->u32SettingEntryCount == 0 ||
-        psConfig->szPartitionName == NULL)
+    if (NULL == config ||
+        NULL == config->settingEntries ||
+        0 == config->settingEntryCount ||
+        NULL == config->partitionName)
     {
         return NVSJSON_ESETRET_InvalidLibrarySettings;
     }
 
-    pHandle->psConfig = psConfig;
+    pHandle->config = config;
     return NVSJSON_ESETRET_OK;
 }
 
 NVSJSON_ESETRET NVSJSON_Load(NVSJSON_SHandle* pHandle)
 {
-    if (pHandle->bIsInitialized)
+    if (pHandle->isInitialized)
     {
-        nvs_close(pHandle->sNVS);
-        pHandle->bIsInitialized = false;
+        nvs_close(pHandle->nvs);
+        pHandle->isInitialized = false;
     }
-    ESP_ERROR_CHECK(nvs_open(pHandle->psConfig->szPartitionName, NVS_READWRITE, &pHandle->sNVS));
-    pHandle->bIsInitialized = true;
+    ESP_ERROR_CHECK(nvs_open(pHandle->config->partitionName, NVS_READWRITE, &pHandle->nvs));
+    pHandle->isInitialized = true;
     return NVSJSON_ESETRET_OK;
 }
 
 NVSJSON_ESETRET NVSJSON_Save(NVSJSON_SHandle* pHandle)
 {
-    ESP_ERROR_CHECK(nvs_commit(pHandle->sNVS));
+    ESP_ERROR_CHECK(nvs_commit(pHandle->nvs));
     return NVSJSON_ESETRET_OK;
 }
 
-int32_t NVSJSON_GetValueInt32(NVSJSON_SHandle* pHandle, uint16_t u16Entry)
+int32_t NVSJSON_GetValueInt32(NVSJSON_SHandle* pHandle, uint16_t entry)
 {
-    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, u16Entry);
-    assert(pEnt != NULL && pEnt->eType == NVSJSON_ETYPE_Int32);
+    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, entry);
+    assert(NULL != pEnt && pEnt->type == NVSJSON_ETYPE_Int32);
     int32_t s32 = 0;
-    if (nvs_get_i32(pHandle->sNVS, pEnt->szKey, &s32) == ESP_OK)
+    if (ESP_OK == nvs_get_i32(pHandle->nvs, pEnt->key, &s32))
         return s32;
-    return pEnt->uConfig.sInt32.s32Default;
+    return pEnt->uConfig.sInt32.defaultValue;
 }
 
-NVSJSON_ESETRET NVSJSON_SetValueInt32(NVSJSON_SHandle* pHandle, uint16_t u16Entry, bool bIsDryRun, int32_t s32NewValue)
+NVSJSON_ESETRET NVSJSON_SetValueInt32(NVSJSON_SHandle* pHandle, uint16_t entry, bool dry_run, int32_t new_value)
 {
-    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, u16Entry);
-    assert(pEnt != NULL && pEnt->eType == NVSJSON_ETYPE_Int32);
+    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, entry);
+    assert(NULL != pEnt && pEnt->type == NVSJSON_ETYPE_Int32);
 
-    if (pEnt->uConfig.sInt32.ptrValidator != NULL)
+    if (NULL != pEnt->uConfig.sInt32.ptrValidator)
     {
-        if (!pEnt->uConfig.sInt32.ptrValidator(pEnt, s32NewValue))
+        if (!pEnt->uConfig.sInt32.ptrValidator(pEnt, new_value))
             return NVSJSON_ESETRET_ValidatorFailed;
     }
     else
     {
-        if (s32NewValue < pEnt->uConfig.sInt32.s32Min || s32NewValue > pEnt->uConfig.sInt32.s32Max)
+        if (new_value < pEnt->uConfig.sInt32.min || new_value > pEnt->uConfig.sInt32.max)
             return NVSJSON_ESETRET_InvalidRange;
     }
 
-    if (!bIsDryRun)
+    if (!dry_run)
     {
-        const esp_err_t err = nvs_set_i32(pHandle->sNVS, pEnt->szKey, s32NewValue);
+        const esp_err_t err = nvs_set_i32(pHandle->nvs, pEnt->key, new_value);
         ESP_ERROR_CHECK_WITHOUT_ABORT(err);
-        if (err != ESP_OK)
+        if (ESP_OK != err)
             return NVSJSON_ESETRET_CannotSet;
     }
     return NVSJSON_ESETRET_OK;
 }
 
-double NVSJSON_GetValueDouble(NVSJSON_SHandle* pHandle, uint16_t u16Entry)
+double NVSJSON_GetValueDouble(NVSJSON_SHandle* pHandle, uint16_t entry)
 {
-    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, u16Entry);
-    assert(pEnt != NULL && pEnt->eType == NVSJSON_ETYPE_Double);
+    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, entry);
+    assert(NULL != pEnt && pEnt->type == NVSJSON_ETYPE_Double);
     double dbl = 0;
     size_t len = sizeof(double);
-    if (nvs_get_blob(pHandle->sNVS, pEnt->szKey, (void*)&dbl, &len) == ESP_OK)
+    if (ESP_OK == nvs_get_blob(pHandle->nvs, pEnt->key, (void*)&dbl, &len))
         return dbl;
-    return pEnt->uConfig.sDouble.dDefault;
+    return pEnt->uConfig.sDouble.defaultValue;
 }
 
-NVSJSON_ESETRET NVSJSON_SetValueDouble(NVSJSON_SHandle* pHandle, uint16_t u16Entry, bool bIsDryRun, double dNewValue)
+NVSJSON_ESETRET NVSJSON_SetValueDouble(NVSJSON_SHandle* pHandle, uint16_t entry, bool dry_run, double new_value)
 {
-    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, u16Entry);
-    assert(pEnt != NULL && pEnt->eType == NVSJSON_ETYPE_Double);
+    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, entry);
+    assert(NULL != pEnt && pEnt->type == NVSJSON_ETYPE_Double);
 
-    // Default value if it cannot retrieve it ...
-    if (pEnt->uConfig.sDouble.ptrValidator != NULL)
+    if (NULL != pEnt->uConfig.sDouble.ptrValidator)
     {
-        if (!pEnt->uConfig.sDouble.ptrValidator(pEnt, dNewValue))
+        if (!pEnt->uConfig.sDouble.ptrValidator(pEnt, new_value))
             return NVSJSON_ESETRET_ValidatorFailed;
     }
     else
     {
-        if (dNewValue < pEnt->uConfig.sDouble.dMin || dNewValue > pEnt->uConfig.sDouble.dMax)
+        if (new_value < pEnt->uConfig.sDouble.min || new_value > pEnt->uConfig.sDouble.max)
             return NVSJSON_ESETRET_InvalidRange;
     }
 
-    if (!bIsDryRun)
+    if (!dry_run)
     {
-        const esp_err_t err = nvs_set_blob(pHandle->sNVS, pEnt->szKey, &dNewValue, sizeof(double));
+        const esp_err_t err = nvs_set_blob(pHandle->nvs, pEnt->key, &new_value, sizeof(double));
         ESP_ERROR_CHECK_WITHOUT_ABORT(err);
-        if (err != ESP_OK)
+        if (ESP_OK != err)
             return NVSJSON_ESETRET_CannotSet;
     }
     return NVSJSON_ESETRET_OK;
 }
 
-void NVSJSON_GetValueString(NVSJSON_SHandle* pHandle, uint16_t u16Entry, char* out_value, size_t* length)
+void NVSJSON_GetValueString(NVSJSON_SHandle* pHandle, uint16_t entry, char* out_value, size_t* length)
 {
-    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, u16Entry);
-    assert(pEnt != NULL && pEnt->eType == NVSJSON_ETYPE_String);
+    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, entry);
+    assert(NULL != pEnt && pEnt->type == NVSJSON_ETYPE_String);
 
-    if (nvs_get_str(pHandle->sNVS, pEnt->szKey, out_value, length) != ESP_OK)
+    if (ESP_OK != nvs_get_str(pHandle->nvs, pEnt->key, out_value, length))
     {
-        if (pEnt->uConfig.sString.szDefault != NULL)
+        if (NULL != pEnt->uConfig.sString.defaultValue)
         {
-            *length = strlen(pEnt->uConfig.sString.szDefault);
-            strncpy(out_value, pEnt->uConfig.sString.szDefault, *length);
+            *length = strlen(pEnt->uConfig.sString.defaultValue);
+            strncpy(out_value, pEnt->uConfig.sString.defaultValue, *length);
         }
     }
 }
 
-NVSJSON_ESETRET NVSJSON_SetValueString(NVSJSON_SHandle* pHandle, uint16_t u16Entry, bool bIsDryRun, const char* szValue)
+NVSJSON_ESETRET NVSJSON_SetValueString(NVSJSON_SHandle* pHandle, uint16_t entry, bool dry_run, const char* value)
 {
-    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, u16Entry);
-    assert(pEnt != NULL && pEnt->eType == NVSJSON_ETYPE_String);
+    const NVSJSON_SSettingEntry* pEnt = GetSettingEntry(pHandle, entry);
+    assert(NULL != pEnt && pEnt->type == NVSJSON_ETYPE_String);
 
-    // Default value if it cannot retrieve it ...
-    if (pEnt->uConfig.sString.ptrValidator != NULL)
+    if (NULL != pEnt->uConfig.sString.ptrValidator)
     {
-        if (!pEnt->uConfig.sString.ptrValidator(pEnt, szValue))
+        if (!pEnt->uConfig.sString.ptrValidator(pEnt, value))
             return NVSJSON_ESETRET_ValidatorFailed;
     }
 
-    if (!bIsDryRun)
+    if (!dry_run)
     {
-        const esp_err_t err = nvs_set_str(pHandle->sNVS, pEnt->szKey, szValue);
+        const esp_err_t err = nvs_set_str(pHandle->nvs, pEnt->key, value);
         ESP_ERROR_CHECK_WITHOUT_ABORT(err);
-        if (err != ESP_OK)
+        if (ESP_OK != err)
             return NVSJSON_ESETRET_CannotSet;
     }
     return NVSJSON_ESETRET_OK;
@@ -175,62 +173,62 @@ NVSJSON_ESETRET NVSJSON_SetValueString(NVSJSON_SHandle* pHandle, uint16_t u16Ent
 char* NVSJSON_ExportJSON(NVSJSON_SHandle* pHandle)
 {
     cJSON* pRoot = cJSON_CreateObject();
-    if (pRoot == NULL)
+    if (NULL == pRoot)
         goto ERROR;
 
     cJSON* pEntries = cJSON_AddArrayToObject(pRoot, JSON_ENTRIES_NAME);
 
-    for(int i = 0; i < pHandle->psConfig->u32SettingEntryCount; i++)
+    for(int i = 0; i < pHandle->config->settingEntryCount; i++)
     {
-        uint16_t u16Entry = (uint16_t)i;
-        const NVSJSON_SSettingEntry* pEntry = GetSettingEntry( pHandle, u16Entry );
+        uint16_t entry = (uint16_t)i;
+        const NVSJSON_SSettingEntry* pEntry = GetSettingEntry(pHandle, entry);
 
         cJSON* pEntryJSON = cJSON_CreateObject();
-        cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_KEY_NAME, cJSON_CreateString(pEntry->szKey));
+        cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_KEY_NAME, cJSON_CreateString(pEntry->key));
 
         cJSON* pEntryInfoJSON = cJSON_CreateObject();
 
         // Description and flags apply everywhere
-        cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DESC_NAME, cJSON_CreateString(pEntry->szDesc));
-        cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_FLAG_REBOOT_NAME, cJSON_CreateNumber((pEntry->eFlags & NVSJSON_EFLAGS_NeedsReboot)? 1 : 0));
+        cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DESC_NAME, cJSON_CreateString(pEntry->desc));
+        cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_FLAG_REBOOT_NAME, cJSON_CreateNumber((pEntry->flags & NVSJSON_EFLAGS_NeedsReboot) ? 1 : 0));
 
-        if (pEntry->eType == NVSJSON_ETYPE_Int32)
+        if (NVSJSON_ETYPE_Int32 == pEntry->type)
         {
-            if ((pEntry->eFlags & NVSJSON_EFLAGS_Secret) != NVSJSON_EFLAGS_Secret)
-                cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_VALUE_NAME, cJSON_CreateNumber(NVSJSON_GetValueInt32(pHandle, u16Entry)));
+            if ((pEntry->flags & NVSJSON_EFLAGS_Secret) != NVSJSON_EFLAGS_Secret)
+                cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_VALUE_NAME, cJSON_CreateNumber(NVSJSON_GetValueInt32(pHandle, entry)));
 
-            cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DEFAULT_NAME, cJSON_CreateNumber(pEntry->uConfig.sInt32.s32Default));
+            cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DEFAULT_NAME, cJSON_CreateNumber(pEntry->uConfig.sInt32.defaultValue));
 
-            if (pEntry->uConfig.sInt32.ptrValidator == NULL)
+            if (NULL == pEntry->uConfig.sInt32.ptrValidator)
             {
-                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MIN_NAME, cJSON_CreateNumber(pEntry->uConfig.sInt32.s32Min));
-                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MAX_NAME, cJSON_CreateNumber(pEntry->uConfig.sInt32.s32Max));
+                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MIN_NAME, cJSON_CreateNumber(pEntry->uConfig.sInt32.min));
+                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MAX_NAME, cJSON_CreateNumber(pEntry->uConfig.sInt32.max));
             }
             cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_TYPE_NAME, cJSON_CreateString("int32"));
         }
-        else if (pEntry->eType == NVSJSON_ETYPE_Double)
+        else if (NVSJSON_ETYPE_Double == pEntry->type)
         {
-            if ((pEntry->eFlags & NVSJSON_EFLAGS_Secret) != NVSJSON_EFLAGS_Secret)
-                cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_VALUE_NAME, cJSON_CreateNumber(NVSJSON_GetValueDouble(pHandle, u16Entry)));
+            if ((pEntry->flags & NVSJSON_EFLAGS_Secret) != NVSJSON_EFLAGS_Secret)
+                cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_VALUE_NAME, cJSON_CreateNumber(NVSJSON_GetValueDouble(pHandle, entry)));
 
-            cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DEFAULT_NAME, cJSON_CreateNumber(pEntry->uConfig.sDouble.dDefault));
-            if (pEntry->uConfig.sDouble.ptrValidator == NULL)
+            cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DEFAULT_NAME, cJSON_CreateNumber(pEntry->uConfig.sDouble.defaultValue));
+            if (NULL == pEntry->uConfig.sDouble.ptrValidator)
             {
-                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MIN_NAME, cJSON_CreateNumber(pEntry->uConfig.sDouble.dMin));
-                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MAX_NAME, cJSON_CreateNumber(pEntry->uConfig.sDouble.dMax));
+                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MIN_NAME, cJSON_CreateNumber(pEntry->uConfig.sDouble.min));
+                cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_MAX_NAME, cJSON_CreateNumber(pEntry->uConfig.sDouble.max));
             }
             cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_TYPE_NAME, cJSON_CreateString("double"));
         }
-        else if (pEntry->eType == NVSJSON_ETYPE_String)
+        else if (NVSJSON_ETYPE_String == pEntry->type)
         {
             char value[NVSJSON_GETVALUESTRING_MAXLEN+1] = {0,};
             size_t length = NVSJSON_GETVALUESTRING_MAXLEN;
-            if ((pEntry->eFlags & NVSJSON_EFLAGS_Secret) != NVSJSON_EFLAGS_Secret)
+            if ((pEntry->flags & NVSJSON_EFLAGS_Secret) != NVSJSON_EFLAGS_Secret)
             {
-                NVSJSON_GetValueString(pHandle, u16Entry, value, &length);
+                NVSJSON_GetValueString(pHandle, entry, value, &length);
                 cJSON_AddItemToObject(pEntryJSON, JSON_ENTRY_VALUE_NAME, cJSON_CreateString(value));
             }
-            cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DEFAULT_NAME, cJSON_CreateString(pEntry->uConfig.sString.szDefault));
+            cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_DEFAULT_NAME, cJSON_CreateString(pEntry->uConfig.sString.defaultValue));
             cJSON_AddItemToObject(pEntryInfoJSON, JSON_ENTRY_INFO_TYPE_NAME, cJSON_CreateString("string"));
         }
 
@@ -238,7 +236,7 @@ char* NVSJSON_ExportJSON(NVSJSON_SHandle* pHandle)
 
         cJSON_AddItemToArray(pEntries, pEntryJSON);
     }
-    char* pStr =  cJSON_PrintUnformatted(pRoot);
+    char* pStr = cJSON_PrintUnformatted(pRoot);
     cJSON_Delete(pRoot);
     return pStr;
     ERROR:
@@ -246,10 +244,10 @@ char* NVSJSON_ExportJSON(NVSJSON_SHandle* pHandle)
     return NULL;
 }
 
-bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
+bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* json)
 {
-    bool bRet = true;
-    cJSON* pRoot = cJSON_Parse(szJSON);
+    bool ret_ok = true;
+    cJSON* pRoot = cJSON_Parse(json);
 
     cJSON* pEntriesArray = cJSON_GetObjectItem(pRoot, JSON_ENTRIES_NAME);
     if (!cJSON_IsArray(pEntriesArray))
@@ -260,21 +258,21 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
 
     for(int pass = 0; pass < 2; pass++)
     {
-        const bool bIsDryRun = pass == 0;
+        const bool is_dry_run = (0 == pass);
 
         for(int i = 0; i < cJSON_GetArraySize(pEntriesArray); i++)
         {
             cJSON* pEntryJSON = cJSON_GetArrayItem(pEntriesArray, i);
 
             cJSON* pKeyJSON = cJSON_GetObjectItem(pEntryJSON, JSON_ENTRY_KEY_NAME);
-            if (pKeyJSON == NULL || !cJSON_IsString(pKeyJSON))
+            if (NULL == pKeyJSON || !cJSON_IsString(pKeyJSON))
             {
                 ESP_LOGE(TAG, "Cannot find JSON key element");
                 goto ERROR;
             }
 
             cJSON* pValueJSON = cJSON_GetObjectItem(pEntryJSON, JSON_ENTRY_VALUE_NAME);
-            if (pValueJSON == NULL)
+            if (NULL == pValueJSON)
             {
                 // We just ignore changing the setting if the value property is not there.
                 // it allows us to handle secret cases.
@@ -282,16 +280,16 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
                 continue;
             }
 
-            uint16_t u16Entry;
-            if (!GetSettingEntryByKey(pHandle, pKeyJSON->valuestring, &u16Entry))
+            uint16_t entry;
+            if (!GetSettingEntryByKey(pHandle, pKeyJSON->valuestring, &entry))
             {
                 ESP_LOGE(TAG, "Key: '%s' is not valid", pKeyJSON->valuestring);
                 goto ERROR;
             }
 
-            const NVSJSON_SSettingEntry* pSettingEntry = GetSettingEntry(pHandle, u16Entry);
+            const NVSJSON_SSettingEntry* pSettingEntry = GetSettingEntry(pHandle, entry);
 
-            if (pSettingEntry->eType == NVSJSON_ETYPE_Int32)
+            if (NVSJSON_ETYPE_Int32 == pSettingEntry->type)
             {
                 if (!cJSON_IsNumber(pValueJSON))
                 {
@@ -299,14 +297,14 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
                     goto ERROR;
                 }
                 int32_t s32 = pValueJSON->valueint;
-                NVSJSON_ESETRET eSetRet;
-                if ((eSetRet = NVSJSON_SetValueInt32(pHandle, u16Entry, bIsDryRun, s32)) != NVSJSON_ESETRET_OK)
+                NVSJSON_ESETRET set_ret;
+                if ((set_ret = NVSJSON_SetValueInt32(pHandle, entry, is_dry_run, s32)) != NVSJSON_ESETRET_OK)
                 {
-                    ESP_LOGE(TAG, "Unable to set value for key: %s, bIsDryRun: %d, ret: %d", pSettingEntry->szKey, bIsDryRun, eSetRet);
+                    ESP_LOGE(TAG, "Unable to set value for key: %s, is_dry_run: %d, ret: %d", pSettingEntry->key, is_dry_run, set_ret);
                     goto ERROR;
                 }
             }
-            else if (pSettingEntry->eType == NVSJSON_ETYPE_Double)
+            else if (NVSJSON_ETYPE_Double == pSettingEntry->type)
             {
                 if (!cJSON_IsNumber(pValueJSON))
                 {
@@ -314,14 +312,14 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
                     goto ERROR;
                 }
                 double dbl = (float)pValueJSON->valuedouble;
-                NVSJSON_ESETRET eSetRet;
-                if ((eSetRet = NVSJSON_SetValueDouble(pHandle, u16Entry, bIsDryRun, dbl)) != NVSJSON_ESETRET_OK)
+                NVSJSON_ESETRET set_ret;
+                if ((set_ret = NVSJSON_SetValueDouble(pHandle, entry, is_dry_run, dbl)) != NVSJSON_ESETRET_OK)
                 {
-                    ESP_LOGE(TAG, "Unable to set value for key: %s, bIsDryRun: %d, ret: %d", pSettingEntry->szKey, bIsDryRun, eSetRet);
+                    ESP_LOGE(TAG, "Unable to set value for key: %s, is_dry_run: %d, ret: %d", pSettingEntry->key, is_dry_run, set_ret);
                     goto ERROR;
                 }
             }
-            else if (pSettingEntry->eType == NVSJSON_ETYPE_String)
+            else if (NVSJSON_ETYPE_String == pSettingEntry->type)
             {
                 if (!cJSON_IsString(pValueJSON))
                 {
@@ -330,40 +328,40 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* szJSON)
                 }
 
                 const char* str = pValueJSON->valuestring;
-                NVSJSON_ESETRET eSetRet;
-                if ((eSetRet = NVSJSON_SetValueString(pHandle, u16Entry, bIsDryRun, str)) != NVSJSON_ESETRET_OK)
+                NVSJSON_ESETRET set_ret;
+                if ((set_ret = NVSJSON_SetValueString(pHandle, entry, is_dry_run, str)) != NVSJSON_ESETRET_OK)
                 {
-                    ESP_LOGE(TAG, "Unable to set value for key: %s, bIsDryRun: %d, ret: %d", pSettingEntry->szKey, bIsDryRun, eSetRet);
+                    ESP_LOGE(TAG, "Unable to set value for key: %s, is_dry_run: %d, ret: %d", pSettingEntry->key, is_dry_run, set_ret);
                     goto ERROR;
                 }
             }
         }
     }
 
-    bRet = true;
+    ret_ok = true;
     ESP_LOGI(TAG, "Import JSON completed");
     goto END;
     ERROR:
-    bRet = false;
+    ret_ok = false;
     END:
     cJSON_free(pRoot);
-    return bRet;
+    return ret_ok;
 }
 
-static const NVSJSON_SSettingEntry* GetSettingEntry(NVSJSON_SHandle* pHandle, uint16_t u16Entry)
+static const NVSJSON_SSettingEntry* GetSettingEntry(NVSJSON_SHandle* pHandle, uint16_t entry)
 {
-    if ( (int)u16Entry >= pHandle->psConfig->u32SettingEntryCount)
+    if ((int)entry >= pHandle->config->settingEntryCount)
         return NULL;
-    return &pHandle->psConfig->pSettingEntries[(int)u16Entry];
+    return &pHandle->config->settingEntries[(int)entry];
 }
 
-static bool GetSettingEntryByKey(NVSJSON_SHandle* pHandle, const char* szKey, uint16_t* pu16Entry)
+static bool GetSettingEntryByKey(NVSJSON_SHandle* pHandle, const char* key, uint16_t* p_entry)
 {
-    for(int i = 0; i < pHandle->psConfig->u32SettingEntryCount; i++)
+    for(int i = 0; i < pHandle->config->settingEntryCount; i++)
     {
-        if (strcmp(pHandle->psConfig->pSettingEntries[i].szKey, szKey) == 0)
+        if (0 == strcmp(pHandle->config->settingEntries[i].key, key))
         {
-            *pu16Entry = (uint16_t)i;
+            *p_entry = (uint16_t)i;
             return true;
         }
     }
