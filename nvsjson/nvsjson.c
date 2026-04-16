@@ -296,7 +296,7 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* json)
                     ESP_LOGE(TAG, "JSON value type is invalid, not a number");
                     goto ERROR;
                 }
-                int32_t s32 = pValueJSON->valueint;
+                const int32_t s32 = pValueJSON->valueint;
                 NVSJSON_ESETRET set_ret;
                 if ((set_ret = NVSJSON_SetValueInt32(pHandle, entry, is_dry_run, s32)) != NVSJSON_ESETRET_OK)
                 {
@@ -311,7 +311,7 @@ bool NVSJSON_ImportJSON(NVSJSON_SHandle* pHandle, const char* json)
                     ESP_LOGE(TAG, "JSON value type is invalid, not a number");
                     goto ERROR;
                 }
-                double dbl = (float)pValueJSON->valuedouble;
+                const double dbl = (float)pValueJSON->valuedouble;
                 NVSJSON_ESETRET set_ret;
                 if ((set_ret = NVSJSON_SetValueDouble(pHandle, entry, is_dry_run, dbl)) != NVSJSON_ESETRET_OK)
                 {
