@@ -180,7 +180,7 @@ char* NVSJSON_ExportJSON(NVSJSON_SHandle* pHandle)
 
     for(int i = 0; i < pHandle->config->settingEntryCount; i++)
     {
-        uint16_t entry = (uint16_t)i;
+        const uint16_t entry = (uint16_t)i;
         const NVSJSON_SSettingEntry* pEntry = GetSettingEntry(pHandle, entry);
 
         cJSON* pEntryJSON = cJSON_CreateObject();
